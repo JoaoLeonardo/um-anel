@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Que o que tiver de ser, assim será...</title>
+
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            background-image: url("data/background.jpg");
+            background-repeat: repeat;
+        }
+
+        h1 {
+            font-family: 'Fredoka', cursive, sans-serif;
+            text-align: center;
+            border: 1px solid #ddd;
+            padding: 4px;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(45%, 1fr));
+            gap: 1rem;
+        }
+
+        .card {
+            border: 1px solid #ddd;
+            padding: 1rem;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+
+        .card h3 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.1rem;
+        }
+
+        /* Image container */
+        .image-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            margin-bottom: 1rem;
+            overflow: hidden;
+            border-radius: 6px;
+            cursor: zoom-in;
+            background: #eee;
+        }
+
+        .product-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: width 3s;
+        }
+
+        /* Gallery arrows */
+        .image-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 36px;
+            height: 50px;
+            border: none;
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.45);
+            color: white;
+            font-size: 2rem;
+            line-height: 1;
+            cursor: pointer;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.8;
+            transition: opacity 0.15s, background 0.15s;
+        }
+
+        .image-arrow:hover {
+            opacity: 1;
+            background: rgba(0, 0, 0, 0.65);
+        }
+
+        .image-arrow.left {
+            left: 8px;
+        }
+
+        .image-arrow.right {
+            right: 8px;
+        }
+
+        /* Fullscreen image viewer */
+        .image-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            cursor: zoom-out;
+        }
+
+        .image-modal.active {
+            display: flex;
+        }
+
+        .modal-image {
+            max-width: 95vw;
+            max-height: 95vh;
+            object-fit: contain;
+            border-radius: 4px;
+        }
+
+        .modal-close {
+            position: fixed;
+            top: 15px;
+            right: 20px;
+            color: white;
+            font-size: 2.5rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            z-index: 1001;
+            line-height: 1;
+        }
+
+        .ring {
+            color: #007600;
+            font-weight: bold;
+            margin-top: 0.5rem;
+        }
+
+        .whatsapp-button {
+            padding: 12px 18px;
+            border-radius: 999px;
+
+            background: #d33c25;
+            color: white;
+
+            font-weight: bold;
+            text-decoration: none;
+
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+
+            z-index: 900;
+        }
+
+        .whatsapp-button:hover {
+            opacity: 0.9;
+        }
+
+        /* On small screens, use one column */
+        @media (max-width: 600px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .image-arrow {
+                width: 40px;
+                height: 55px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Que o que tiver de ser, assim será...</h1>
+
+    <div id="catalog" class="grid"></div>
+
+    <!-- Product Card Template -->
+    <template id="product-template">
+        <div class="card">
+
+            <div class="image-container">
+                <img
+                    class="product-image"
+                    data-field="image"
+                    alt=""
+                >
+
+                <button
+                    class="image-arrow left"
+                    type="button"
+                    aria-label="Previous image"
+                >
+                    &#8249;
+                </button>
+
+                <button
+                    class="image-arrow right"
+                    type="button"
+                    aria-label="Next image"
+                >
+                    &#8250;
+                </button>
+            </div>
+
+            <h3 data-field="title"></h3>
+
+            <p data-field="description"></p>
+            
+        </div>
+    </template>
+
+    <!-- Fullscreen Image Viewer -->
+    <div id="image-modal" class="image-modal">
+        <button
+            id="modal-close"
+            class="modal-close"
+            type="button"
+            aria-label="Close image"
+        >
+            &times;
+        </button>
+
+        <img
+            id="modal-image"
+            class="modal-image"
+            src=""
+            alt=""
+        >
+    </div>
+
+    <script>
+        // Initial State Data
+        const state = {
+            searchQuery: '',
+
+            products: [
+                {
+                    id: 1,
+                    title: 'Azul cor do mar',
+                    description: 'Juro, eu gostei muito da cor. Me lembra essa você <3',
+                    image1: 'data/azul1.jpeg',
+                    image2: 'data/azul2.jpeg'
+                },
+
+                {
+                    id: 2,
+                    title: 'Azul cor do céu',
+                    description: 'Clarinho, mais delícado. Dá pra se perder no brilho (eita, já me perdi e comecei falar de tu)',
+                    image1: 'data/azul-claro1.jpeg',
+                    image2: 'data/azul-claro2.jpeg'
+                },
+
+                {
+                    id: 3,
+                    title: 'Verde defensora',
+                    description: 'Dispensa comentários. Absurdo de bonito',
+                    image1: 'data/verde1.jpeg',
+                    image2: 'data/verde2.jpeg'
+                },
+
+                {
+                    id: 4,
+                    title: 'Prata prata',
+                    description: 'Lindo, bem detalhadinho. Útil contra lobisomem, acredito eu',
+                    image1: 'data/prata1.jpeg',
+                    image2: 'data/prata2.jpeg'
+                }
+            ]
+        };
+
+        // Reactive Render Function
+        function render() {
+            const container = document.getElementById('catalog');
+            const template = document.getElementById('product-template');
+
+            container.innerHTML = '';
+
+            const filtered = state.products.filter(product =>
+                product.title.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
+                product.description.toLowerCase().includes(state.searchQuery.toLowerCase())
+            );
+
+            filtered.forEach(product => {
+                const clone = template.content.cloneNode(true);
+
+                const card = clone.querySelector('.card');
+                const image = clone.querySelector('[data-field="image"]');
+                const title = clone.querySelector('[data-field="title"]');
+                const description = clone.querySelector('[data-field="description"]');
+
+                image.src = product.image1;
+                image.alt = product.title;
+
+                title.textContent = product.title;
+                description.textContent = product.description;
+
+                let currentImage = 0;
+                const images = [
+                    product.image1,
+                    product.image2
+                ];
+
+                const updateImage = () => {
+                    image.src = images[currentImage];
+                };
+
+                // Previous image
+                clone.querySelector('.image-arrow.left').addEventListener('click', event => {
+                    event.stopPropagation();
+
+                    currentImage =
+                        (currentImage - 1 + images.length) % images.length;
+
+                    updateImage();
+                });
+
+                // Next image
+                clone.querySelector('.image-arrow.right').addEventListener('click', event => {
+                    event.stopPropagation();
+
+                    currentImage =
+                        (currentImage + 1) % images.length;
+
+                    updateImage();
+                });
+
+                // Open fullscreen image
+                image.addEventListener('click', () => {
+                    openImage(image.src, product.title);
+                });
+
+                container.appendChild(clone);
+            });
+        }
+
+        // Open fullscreen image viewer
+        function openImage(src, alt) {
+            const modal = document.getElementById('image-modal');
+            const modalImage = document.getElementById('modal-image');
+
+            modalImage.src = src;
+            modalImage.alt = alt;
+
+            modal.classList.add('active');
+
+            // Prevent page scrolling while image is open
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Close fullscreen image viewer
+        function closeImage() {
+            const modal = document.getElementById('image-modal');
+
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Close button
+        document.getElementById('modal-close').addEventListener('click', event => {
+            event.stopPropagation();
+            closeImage();
+        });
+
+        // Close by clicking outside the image
+        document.getElementById('image-modal').addEventListener('click', event => {
+            if (event.target.id === 'image-modal') {
+                closeImage();
+            }
+        });
+
+        // Close with Escape
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape') {
+                closeImage();
+            }
+        });
+
+        // State Updater Action
+        function updateSearch(query) {
+            state.searchQuery = query;
+            render();
+        }
+
+        // Initial Load
+        render();
+    </script>
+
+</body>
+</html>
+```
